@@ -97,6 +97,23 @@ app.post('/api/employees', async (req, res) => {
   }
 });
 
+// Login endpoint for employees and admins
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+  const user = await Employee.findOne({ email, password });
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  res.json({
+    email: user.email,
+    role: user.role,
+    name: user.name
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 
