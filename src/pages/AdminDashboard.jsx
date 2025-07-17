@@ -46,9 +46,79 @@ const AdminDashboard = () => {
     setEmpLoading(false);
   };
 
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [leaveBalances, setLeaveBalances] = useState(null);
+  const [leaveHistory, setLeaveHistory] = useState([]);
+  const [editBalances, setEditBalances] = useState(null);
+  const [balanceMsg, setBalanceMsg] = useState('');
+
   useEffect(() => {
     loadStats();
+    fetchEmployees();
   }, [refreshTrigger]);
+
+  useEffect(() => {
+    if (selectedEmployee) {
+      fetchLeaveBalances(selectedEmployee.email);
+      fetchLeaveHistory(selectedEmployee.email);
+    } else {
+      setLeaveBalances(null);
+      setLeaveHistory([]);
+    }
+  }, [selectedEmployee]);
+
+  useEffect(() => {
+    if (leaveBalances) {
+      setEditBalances({ ...leaveBalances });
+    }
+  }, [leaveBalances]);
+
+  const handleBalanceChange = (type, value) => {
+    setEditBalances(prev => ({ ...prev, [type]: Number(value) }));
+  };
+
+  const handleSaveBalances = async () => {
+    if (!selectedEmployee) return;
+    setBalanceMsg('');
+    try {
+      await axios.put(`http://localhost:5000/api/employees/${selectedEmployee.email}/leave-balance`, editBalances);
+      setBalanceMsg('Leave balances updated!');
+      fetchLeaveBalances(selectedEmployee.email);
+    } catch (err) {
+      setBalanceMsg('Failed to update balances');
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/employees');
+      setEmployees(res.data);
+      if (res.data.length > 0 && !selectedEmployee) {
+        setSelectedEmployee(res.data[0]);
+      }
+    } catch (err) {
+      setEmployees([]);
+    }
+  };
+
+  const fetchLeaveBalances = async (email) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/employees/${email}/leave-balance`);
+      setLeaveBalances(res.data);
+    } catch (err) {
+      setLeaveBalances(null);
+    }
+  };
+
+  const fetchLeaveHistory = async (email) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/employees/${email}/leave-history`);
+      setLeaveHistory(res.data || []);
+    } catch (err) {
+      setLeaveHistory([]);
+    }
+  };
 
   const loadStats = () => {
     const allLeaves = JSON.parse(localStorage.getItem('leaveApplications') || '[]');
@@ -88,6 +158,14 @@ const AdminDashboard = () => {
       </div>
     </div>
   );
+
+  // After leave status change, refresh balances/history for selected employee
+  const handleLeaveStatusChange = () => {
+    if (selectedEmployee) {
+      fetchLeaveBalances(selectedEmployee.email);
+      fetchLeaveHistory(selectedEmployee.email);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -130,9 +208,82 @@ const AdminDashboard = () => {
           </form>
         </div>
 
+        {/* Employee Leave Balances & History */}
+        <div className="mb-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">View Employee Leave Balances & History</h2>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select Employee</label>
+            <select
+              value={selectedEmployee?.email || ''}
+              onChange={e => {
+                const emp = employees.find(emp => emp.email === e.target.value);
+                setSelectedEmployee(emp);
+              }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            >
+              {employees.map(emp => (
+                <option key={emp.email} value={emp.email}>{emp.name} ({emp.email})</option>
+              ))}
+            </select>
+          </div>
+          {leaveBalances && (
+            <div className="mb-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {['sick', 'casual', 'annual', 'maternity', 'paternity', 'emergency'].map(type => (
+                <div key={type} className="bg-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 text-center">
+                  <div className="text-xs text-gray-500 font-medium mb-1 capitalize">{type} Leave</div>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editBalances ? editBalances[type] ?? 0 : 0}
+                    onChange={e => handleBalanceChange(type, e.target.value)}
+                    className="text-2xl font-bold text-gray-900 w-16 text-center border border-gray-300 rounded"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          {leaveBalances && (
+            <div className="mb-4 flex items-center gap-4">
+              <button onClick={handleSaveBalances} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700">Save Balances</button>
+              {balanceMsg && <span className={`text-sm ${balanceMsg.includes('updated') ? 'text-green-600' : 'text-red-600'}`}>{balanceMsg}</span>}
+            </div>
+          )}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Leave History</h3>
+            {leaveHistory.length === 0 ? (
+              <div className="text-gray-500">No leave history found.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white rounded-xl shadow-sm border border-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">From</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">To</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Days</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaveHistory.map((leave) => (
+                      <tr key={leave._id}>
+                        <td className="px-4 py-2 text-sm">{leave.leaveType}</td>
+                        <td className="px-4 py-2 text-sm">{leave.fromDate}</td>
+                        <td className="px-4 py-2 text-sm">{leave.toDate}</td>
+                        <td className="px-4 py-2 text-sm">{leave.numberOfDays || 1}</td>
+                        <td className="px-4 py-2 text-sm capitalize">{leave.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Leave Applications */}
         <div>
-          <LeaveList refreshTrigger={refreshTrigger} />
+          <LeaveList refreshTrigger={refreshTrigger} onStatusChange={handleLeaveStatusChange} />
         </div>
       </div>
     </div>

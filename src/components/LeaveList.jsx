@@ -7,7 +7,7 @@ import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api/leaves';
 
-const LeaveList = ({ refreshTrigger }) => {
+const LeaveList = ({ refreshTrigger, onStatusChange }) => {
   const { user } = useAuth();
   const [leaves, setLeaves] = useState([]);
   const [filteredLeaves, setFilteredLeaves] = useState([]);
@@ -58,11 +58,13 @@ const LeaveList = ({ refreshTrigger }) => {
   const handleApprove = async (leaveId) => {
     await updateLeaveStatus(leaveId, 'Approved');
     toast.success('Leave approved successfully!');
+    if (onStatusChange) onStatusChange();
   };
 
   const handleReject = async (leaveId) => {
     await updateLeaveStatus(leaveId, 'Rejected');
     toast.success('Leave rejected successfully!');
+    if (onStatusChange) onStatusChange();
   };
 
   const updateLeaveStatus = async (leaveId, newStatus) => {
@@ -78,6 +80,7 @@ const LeaveList = ({ refreshTrigger }) => {
   const handleEditStatus = async (leaveId, newStatus) => {
     await updateLeaveStatus(leaveId, newStatus);
     toast.success('Leave status updated!');
+    if (onStatusChange) onStatusChange();
   };
 
   return (

@@ -17,8 +17,24 @@ mongoose.connect('mongodb://localhost:27017/leave_management', {
 
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once('open', () => {
+
+// Ensure default admin exists
+const ensureDefaultAdmin = async () => {
+  const admin = await Employee.findOne({ role: 'admin' });
+  if (!admin) {
+    await Employee.create({
+      name: 'Admin',
+      email: 'admin@brainybeam.com',
+      password: 'admin123',
+      role: 'admin',
+    });
+    console.log('Default admin created: admin@brainybeam.com / admin123');
+  }
+};
+
+db.once('open', async () => {
   console.log('Connected to MongoDB');
+  await ensureDefaultAdmin();
 });
 
 // Leave Application Schema
@@ -41,6 +57,15 @@ const employeeSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['admin', 'employee'], default: 'employee' },
+  leaveBalances: {
+    sick: { type: Number, default: 5 },
+    casual: { type: Number, default: 5 },
+    annual: { type: Number, default: 7 },
+    maternity: { type: Number, default: 0 },
+    paternity: { type: Number, default: 0 },
+    emergency: { type: Number, default: 2 },
+  },
+  leaveHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: 'LeaveApplication' }],
 });
 
 const Employee = mongoose.model('Employee', employeeSchema);
@@ -59,6 +84,29 @@ app.post('/api/leaves', async (req, res) => {
 
 app.put('/api/leaves/:id', async (req, res) => {
   const leave = await LeaveApplication.findByIdAndUpdate(req.params.id, req.body, { new: true });
+
+  // If status is being set to Approved and was not already Approved, update employee leave balance and history
+  if (leave && req.body.status === 'Approved') {
+    const employee = await Employee.findOne({ email: leave.employeeEmail });
+    if (employee) {
+      // Only update if this leave is not already in history (prevents double decrement)
+      const alreadyInHistory = employee.leaveHistory.some(
+        id => id.toString() === leave._id.toString()
+      );
+      if (!alreadyInHistory) {
+        // Decrement leave balance for the leave type
+        const leaveType = leave.leaveType.toLowerCase();
+        const days = leave.numberOfDays || 1;
+        if (employee.leaveBalances[leaveType] !== undefined) {
+          employee.leaveBalances[leaveType] = Math.max(0, employee.leaveBalances[leaveType] - days);
+        }
+        // Add to leave history
+        employee.leaveHistory.push(leave._id);
+        await employee.save();
+      }
+    }
+  }
+
   res.json(leave);
 });
 
@@ -112,6 +160,43 @@ app.post('/api/login', async (req, res) => {
     role: user.role,
     name: user.name
   });
+});
+
+// Endpoint to get leave balance for an employee by email
+app.get('/api/employees/:email/leave-balance', async (req, res) => {
+  try {
+    const employee = await Employee.findOne({ email: req.params.email });
+    if (!employee) return res.status(404).json({ error: 'Employee not found' });
+    res.json(employee.leaveBalances);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch leave balance' });
+  }
+});
+
+// Endpoint to update leave balance for an employee by email
+app.put('/api/employees/:email/leave-balance', async (req, res) => {
+  try {
+    const employee = await Employee.findOneAndUpdate(
+      { email: req.params.email },
+      { leaveBalances: req.body },
+      { new: true }
+    );
+    if (!employee) return res.status(404).json({ error: 'Employee not found' });
+    res.json(employee.leaveBalances);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update leave balance' });
+  }
+});
+
+// Endpoint to get leave history for an employee by email
+app.get('/api/employees/:email/leave-history', async (req, res) => {
+  try {
+    const employee = await Employee.findOne({ email: req.params.email }).populate('leaveHistory');
+    if (!employee) return res.status(404).json({ error: 'Employee not found' });
+    res.json(employee.leaveHistory);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch leave history' });
+  }
 });
 
 app.listen(PORT, () => {
