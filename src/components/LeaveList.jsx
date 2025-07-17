@@ -74,6 +74,12 @@ const LeaveList = ({ refreshTrigger }) => {
     }
   };
 
+  // Add handler for editing status
+  const handleEditStatus = async (leaveId, newStatus) => {
+    await updateLeaveStatus(leaveId, newStatus);
+    toast.success('Leave status updated!');
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex justify-between items-center mb-6">
@@ -133,6 +139,7 @@ const LeaveList = ({ refreshTrigger }) => {
               isAdmin={user.role === 'admin'}
               onApprove={handleApprove}
               onReject={handleReject}
+              onEditStatus={handleEditStatus}
             />
           ))
         )}

@@ -35,6 +35,16 @@ const leaveSchema = new mongoose.Schema({
 
 const LeaveApplication = mongoose.model('LeaveApplication', leaveSchema);
 
+// Employee Schema
+const employeeSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['admin', 'employee'], default: 'employee' },
+});
+
+const Employee = mongoose.model('Employee', employeeSchema);
+
 // Routes
 app.get('/api/leaves', async (req, res) => {
   const leaves = await LeaveApplication.find();
@@ -55,6 +65,36 @@ app.put('/api/leaves/:id', async (req, res) => {
 app.delete('/api/leaves/:id', async (req, res) => {
   await LeaveApplication.findByIdAndDelete(req.params.id);
   res.json({ message: 'Leave application deleted' });
+});
+
+// List all employees
+app.get('/api/employees', async (req, res) => {
+  try {
+    const employees = await Employee.find();
+    res.json(employees);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch employees' });
+  }
+});
+
+// Add a new employee
+app.post('/api/employees', async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+    // Check if email already exists
+    const existing = await Employee.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ error: 'Employee with this email already exists' });
+    }
+    const employee = new Employee({ name, email, password, role });
+    await employee.save();
+    res.status(201).json(employee);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add employee' });
+  }
 });
 
 app.listen(PORT, () => {

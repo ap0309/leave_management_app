@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, Clock, FileText, User, Check, X } from 'lucide-react';
 
-const LeaveCard = ({ leave, isAdmin, onApprove, onReject }) => {
+const LeaveCard = ({ leave, isAdmin, onApprove, onReject, onEditStatus }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Approved':
@@ -67,22 +67,39 @@ const LeaveCard = ({ leave, isAdmin, onApprove, onReject }) => {
         <span>Applied on: {formatDate(leave.appliedDate)}</span>
       </div>
 
-      {isAdmin && leave.status === 'Pending' && (
-        <div className="flex space-x-3">
-          <button
-            onClick={() => onApprove(leave._id)}
-            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors flex items-center justify-center space-x-2"
-          >
-            <Check className="w-4 h-4" />
-            <span>Approve</span>
-          </button>
-          <button
-            onClick={() => onReject(leave._id)}
-            className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center space-x-2"
-          >
-            <X className="w-4 h-4" />
-            <span>Reject</span>
-          </button>
+      {isAdmin && (
+        <div className="flex flex-col gap-2">
+          {leave.status === 'Pending' && (
+            <div className="flex space-x-3">
+              <button
+                onClick={() => onApprove(leave._id)}
+                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors flex items-center justify-center space-x-2"
+              >
+                <Check className="w-4 h-4" />
+                <span>Approve</span>
+              </button>
+              <button
+                onClick={() => onReject(leave._id)}
+                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center space-x-2"
+              >
+                <X className="w-4 h-4" />
+                <span>Reject</span>
+              </button>
+            </div>
+          )}
+          {/* Edit status dropdown for admin */}
+          <div className="flex items-center space-x-2 mt-2">
+            <label className="text-sm text-gray-700 font-medium">Edit Status:</label>
+            <select
+              value={leave.status}
+              onChange={e => onEditStatus && onEditStatus(leave._id, e.target.value)}
+              className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
         </div>
       )}
     </div>
