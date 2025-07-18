@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import LeaveList from '../components/LeaveList';
 import { Users, Calendar, Clock, CheckCircle, XCircle, TrendingUp } from 'lucide-react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -36,7 +37,7 @@ const AdminDashboard = () => {
     setEmpLoading(true);
     setEmpMessage('');
     try {
-      const res = await axios.post('http://localhost:5000/api/employees', employeeForm);
+      const res = await axios.post(API_ENDPOINTS.EMPLOYEES, employeeForm);
       setEmpMessage('Employee added successfully!');
       setEmployeeForm({ name: '', email: '', password: '', role: 'employee' });
       setRefreshTrigger(prev => prev + 1);
@@ -82,7 +83,7 @@ const AdminDashboard = () => {
     if (!selectedEmployee) return;
     setBalanceMsg('');
     try {
-      await axios.put(`http://localhost:5000/api/employees/${selectedEmployee.email}/leave-balance`, editBalances);
+      await axios.put(API_ENDPOINTS.UPDATE_LEAVE_BALANCE(selectedEmployee.email), editBalances);
       setBalanceMsg('Leave balances updated!');
       fetchLeaveBalances(selectedEmployee.email);
     } catch (err) {
@@ -92,7 +93,7 @@ const AdminDashboard = () => {
 
   const fetchEmployees = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/employees');
+      const res = await axios.get(API_ENDPOINTS.EMPLOYEES);
       setEmployees(res.data);
       if (res.data.length > 0 && !selectedEmployee) {
         setSelectedEmployee(res.data[0]);
@@ -104,7 +105,7 @@ const AdminDashboard = () => {
 
   const fetchLeaveBalances = async (email) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/employees/${email}/leave-balance`);
+      const res = await axios.get(API_ENDPOINTS.LEAVE_BALANCE(email));
       setLeaveBalances(res.data);
     } catch (err) {
       setLeaveBalances(null);
@@ -113,7 +114,7 @@ const AdminDashboard = () => {
 
   const fetchLeaveHistory = async (email) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/employees/${email}/leave-history`);
+      const res = await axios.get(API_ENDPOINTS.LEAVE_HISTORY(email));
       setLeaveHistory(res.data || []);
     } catch (err) {
       setLeaveHistory([]);

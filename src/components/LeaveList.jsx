@@ -4,8 +4,7 @@ import LeaveCard from './LeaveCard';
 import { toast } from 'react-toastify';
 import { Search, Filter } from 'lucide-react';
 import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api/leaves';
+import { API_ENDPOINTS } from '../config/api';
 
 const LeaveList = ({ refreshTrigger, onStatusChange }) => {
   const { user } = useAuth();
@@ -26,7 +25,7 @@ const LeaveList = ({ refreshTrigger, onStatusChange }) => {
 
   const loadLeaves = async () => {
     try {
-      const res = await axios.get(API_URL);
+      const res = await axios.get(API_ENDPOINTS.LEAVES);
       let allLeaves = res.data;
       if (user.role !== 'admin') {
         allLeaves = allLeaves.filter(leave => leave.employeeEmail === user.email);
@@ -69,7 +68,7 @@ const LeaveList = ({ refreshTrigger, onStatusChange }) => {
 
   const updateLeaveStatus = async (leaveId, newStatus) => {
     try {
-      await axios.put(`${API_URL}/${leaveId}`, { status: newStatus });
+      await axios.put(`${API_ENDPOINTS.LEAVES}/${leaveId}`, { status: newStatus });
       loadLeaves();
     } catch (err) {
       toast.error('Failed to update leave status');

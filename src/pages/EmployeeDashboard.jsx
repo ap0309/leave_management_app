@@ -5,6 +5,7 @@ import LeaveForm from '../components/LeaveForm';
 import LeaveList from '../components/LeaveList';
 import { Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api';
 
 const EmployeeDashboard = () => {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ const EmployeeDashboard = () => {
   const fetchLeaveBalances = async () => {
     if (!user?.email) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/employees/${user.email}/leave-balance`);
+      const res = await axios.get(API_ENDPOINTS.LEAVE_BALANCE(user.email));
       setLeaveBalances(res.data);
     } catch (err) {
       setLeaveBalances(null);
@@ -49,7 +50,7 @@ const EmployeeDashboard = () => {
   const fetchLeaveHistory = async () => {
     if (!user?.email) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/employees/${user.email}/leave-history`);
+      const res = await axios.get(API_ENDPOINTS.LEAVE_HISTORY(user.email));
       setLeaveHistory(res.data || []);
     } catch (err) {
       setLeaveHistory([]);

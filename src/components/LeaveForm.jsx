@@ -3,8 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { Calendar, FileText, Clock } from 'lucide-react';
 import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api/leaves';
+import { API_ENDPOINTS } from '../config/api';
 
 const LeaveForm = ({ onLeaveSubmitted }) => {
   const { user } = useAuth();
@@ -58,7 +57,7 @@ const LeaveForm = ({ onLeaveSubmitted }) => {
     };
 
     try {
-      await axios.post(API_URL, leaveApplication);
+      await axios.post(API_ENDPOINTS.LEAVES, leaveApplication);
       toast.success('Leave application submitted successfully!');
       setFormData({
         fromDate: '',
